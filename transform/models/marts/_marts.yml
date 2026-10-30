@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: fct_orders
+    description: One row per order with the delivery promise, the outcome, the review and checkout-time features.
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: customer_unique_id
+        data_tests: [not_null]
+      - name: promised_days
+        data_tests:
+          - not_null
+          - between: {arguments: {min_value: 0, max_value: 200}}
+      - name: review_score
+        data_tests:
+          - accepted_values: {arguments: {values: [1, 2, 3, 4, 5]}}
+      - name: distance_km
+        data_tests:
+          - between: {arguments: {min_value: 0, max_value: 5000}}
+      - name: freight_share
+        data_tests:
+          - between: {arguments: {min_value: 0, max_value: 1}}
+
+  - name: fct_customer_first_purchase
+    description: First purchase session per customer and whether a second session followed within the window.
+    columns:
+      - name: customer_unique_id
+        data_tests: [unique, not_null]
+      - name: days_to_second_purchase
+        data_tests:
+          - between: {arguments: {min_value: 1, max_value: 1000}}

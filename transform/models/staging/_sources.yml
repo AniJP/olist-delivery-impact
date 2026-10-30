@@ -1,0 +1,32 @@
+version: 2
+
+sources:
+  - name: olist
+    description: >
+      The 9 CSVs of the Brazilian E-Commerce Public Dataset by Olist (Kaggle), read in place by DuckDB.
+      OLIST_RAW_DIR points at the folder (data/raw for the real data, data/sample for CI).
+    meta:
+      external_location: >-
+        read_csv('{{ env_var("OLIST_RAW_DIR", "../data/raw") }}/olist_{name}_dataset.csv',
+                 header = true, auto_detect = true)
+    tables:
+      - name: orders
+        description: One row per order with status and lifecycle timestamps (Brazil local time).
+      - name: customers
+        description: "customer_id is per order; customer_unique_id identifies the person."
+      - name: order_items
+        description: One row per item in an order (an order can have several items and sellers).
+      - name: order_payments
+        description: One row per payment method used on an order.
+      - name: order_reviews
+        description: Post-purchase satisfaction survey, sent around the estimated delivery date.
+      - name: products
+      - name: sellers
+      - name: geolocation
+        description: Many lat/lng points per zip-code prefix (some outside Brazil).
+      - name: category_translation
+        description: Portuguese to English product category names.
+        meta:
+          external_location: >-
+            read_csv('{{ env_var("OLIST_RAW_DIR", "../data/raw") }}/product_category_name_translation.csv',
+                     header = true, auto_detect = true)

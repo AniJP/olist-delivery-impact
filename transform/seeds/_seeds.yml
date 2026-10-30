@@ -1,0 +1,8 @@
+version: 2
+
+seeds:
+  - name: category_translation_patch
+    description: English names for the 2 product categories missing from Olist's translation file.
+    columns:
+      - name: product_category_name
+        data_tests: [unique, not_null]

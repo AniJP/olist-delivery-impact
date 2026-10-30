@@ -1,0 +1,47 @@
+version: 2
+
+models:
+  - name: int_order_baskets
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: n_items
+        data_tests:
+          - between: {arguments: {min_value: 1, max_value: 25}}
+
+  - name: int_order_payments
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+
+  - name: int_purchase_sessions
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: session_number
+        data_tests:
+          - between: {arguments: {min_value: 1, max_value: 100}}
+
+unit_tests:
+  - name: same_day_orders_are_one_session
+    description: Orders placed by one person on the same day form one session; a later day starts session 2.
+    model: int_purchase_sessions
+    given:
+      - input: ref('stg_olist__orders')
+        rows:
+          - {order_id: "o1", customer_id: "c1", purchased_at: "2018-01-05 10:00:00"}
+          - {order_id: "o2", customer_id: "c2", purchased_at: "2018-01-05 10:01:00"}
+          - {order_id: "o3", customer_id: "c3", purchased_at: "2018-03-01 09:00:00"}
+          - {order_id: "o4", customer_id: "c4", purchased_at: "2018-02-01 09:00:00"}
+      - input: ref('stg_olist__customers')
+        rows:
+          - {customer_id: "c1", customer_unique_id: "alice"}
+          - {customer_id: "c2", customer_unique_id: "alice"}
+          - {customer_id: "c3", customer_unique_id: "alice"}
+          - {customer_id: "c4", customer_unique_id: "bob"}
+    expect:
+      rows:
+        - {order_id: "o1", session_number: 1, orders_in_session: 2}
+        - {order_id: "o2", session_number: 1, orders_in_session: 2}
+        - {order_id: "o3", session_number: 2, orders_in_session: 1}
+        - {order_id: "o4", session_number: 1, orders_in_session: 1}

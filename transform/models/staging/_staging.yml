@@ -1,0 +1,72 @@
+version: 2
+
+models:
+  - name: stg_olist__orders
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: customer_id
+        data_tests: [unique, not_null]
+      - name: order_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [delivered, shipped, canceled, unavailable, invoiced, processing, created, approved]
+      - name: purchased_at
+        data_tests: [not_null]
+      - name: estimated_delivery_date
+        data_tests: [not_null]
+
+  - name: stg_olist__customers
+    columns:
+      - name: customer_id
+        data_tests: [unique, not_null]
+      - name: customer_unique_id
+        data_tests: [not_null]
+
+  - name: stg_olist__order_items
+    data_tests:
+      - unique_combination: {arguments: {columns: [order_id, order_item_id]}}
+    columns:
+      - name: order_id
+        data_tests:
+          - relationships: {arguments: {to: ref('stg_olist__orders'), field: order_id}}
+      - name: price
+        data_tests: [not_null, non_negative]
+      - name: freight_value
+        data_tests: [not_null, non_negative]
+
+  - name: stg_olist__payments
+    data_tests:
+      - unique_combination: {arguments: {columns: [order_id, payment_sequential]}}
+    columns:
+      - name: payment_value
+        data_tests: [non_negative]
+
+  - name: stg_olist__reviews
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: review_score
+        data_tests:
+          - accepted_values: {arguments: {values: [1, 2, 3, 4, 5]}}
+
+  - name: stg_olist__products
+    columns:
+      - name: product_id
+        data_tests: [unique, not_null]
+      - name: category
+        data_tests: [not_null]
+
+  - name: stg_olist__sellers
+    columns:
+      - name: seller_id
+        data_tests: [unique, not_null]
+
+  - name: stg_olist__zip_locations
+    columns:
+      - name: zip_prefix
+        data_tests: [unique, not_null]
+      - name: lat
+        data_tests:
+          - between: {arguments: {min_value: -34, max_value: 5.3}}

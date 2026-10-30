@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    name: Lint, dbt build and reconciliation on synthetic data
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check scripts
+
+      # The real Olist data isn't committed (size + license). CI builds the warehouse from a synthetic
+      # dataset with the identical schema, runs every dbt test, then reconciles the SQL results with an
+      # independent pandas implementation.
+      - name: Generate synthetic data
+        run: python scripts/make_sample_data.py --out data/sample
+
+      - name: dbt build (models, unit tests, data tests)
+        working-directory: transform
+        env:
+          OLIST_RAW_DIR: ../data/sample
+          OLIST_WAREHOUSE_PATH: ../warehouse/ci.duckdb
+        run: |
+          mkdir -p ../warehouse
+          dbt build --profiles-dir .
+
+      - name: Reconcile SQL vs pandas
+        run: python scripts/reconcile.py --raw data/sample --db warehouse/ci.duckdb

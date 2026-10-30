@@ -1,0 +1,19 @@
+# raw data is downloaded from Kaggle, not committed (size + license)
+data/
+!data/README.md
+warehouse/
+*.duckdb
+*.duckdb.wal
+
+transform/target/
+transform/logs/
+transform/dbt_packages/
+transform/.user.yml
+
+__pycache__/
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.DS_Store
