@@ -2,7 +2,7 @@
 
 A data science project on **96k real e-commerce orders** from Olist, a Brazilian marketplace. Olist's delivery estimates are padded by about 12 days, yet 6.8% of orders still arrive late, and late orders collapse review scores (4.3 → 2.3 stars). This project measures what lateness really costs, models each order's delivery time at checkout, and designs an experiment for setting **personalised, shorter promises without more late orders**.
 
-> **Status:** Phases 1–3 (data foundation, causal analysis, delivery-time model) complete. Phases 4–6 in progress.
+> **Status:** Phases 1–4 (data foundation, causal analysis, delivery-time model, trade-off) complete. Phases 5–6 in progress.
 
 ## Plan
 
@@ -11,7 +11,7 @@ A data science project on **96k real e-commerce orders** from Olist, a Brazilian
 | **1. Data foundation** ✅ | Can we trust the data? | dbt + DuckDB, 17 models, 72 data tests, 2 unit tests, SQL-vs-pandas reconciliation |
 | **2. Causal analysis** ✅ | How much does lateness *cause* bad reviews and lost customers? | Regression with controls and seller fixed effects, propensity weighting, cross-fitted doubly robust estimation, dose-response, placebo and E-value |
 | **3. Prediction** ✅ | How long will *this* order take, known at checkout? | Point-in-time feature mart, LightGBM quantile regression, out-of-time test, split-conformal calibration |
-| 4. Trade-off | How much shorter could promises be at today's late rate? | Promise-length vs. late-rate frontier |
+| **4. Trade-off** ✅ | How much shorter could promises be at today's late rate? | Policy frontier (uniform shift vs per-order quantile vs cost-aware), out-of-time evaluation, review impact via Phase 2 dose-response |
 | 5. Experiment design | How would we test personalised promises safely? | Metrics, guardrails, power analysis |
 | 6. Business impact | What should Olist do? | Memo + dashboard |
 
@@ -26,12 +26,21 @@ A data science project on **96k real e-commerce orders** from Olist, a Brazilian
 
 ![Dose-response](docs/figures/02_dose_response.png)
 
+## Phase 4 results ([notebook](analysis/04_promise_tradeoff.ipynb) · [write-up](docs/PHASE4_RESULTS.md))
+
+![Promise frontier](docs/figures/04_frontier.png)
+
+- **Deployable policy:** model promise at P92.5, chosen in January 2018 and run unchanged through Feb–Aug. It would have cut late deliveries from **9.0% to 6.5% (−28%)** and avoided **~140 one-star reviews per 10,000 orders**, for promises 0.6 days longer on average.
+- **The menu:** at Olist's average promise, 23% fewer late orders; or at Olist's late rate, promises **2.1 days shorter**, worth about +1.6% sales if a published elasticity (Cui et al., 2024) transfers.
+- **Why it works:** it moves slack from where it is wasted to where it is missing. São Paulo promises get 1.7 days shorter at the same late rate, while Rio de Janeiro and Bahia get longer promises and roughly half the late rate.
+- **Keep it simple:** a cost-aware per-order optimiser adds nothing over a single quantile.
+
 ## Phase 3 results ([notebook](analysis/03_delivery_time_model.ipynb) · [write-up](docs/PHASE3_RESULTS.md))
 
 ![Promise frontier](docs/figures/03_promise_frontier.png)
 
 - **Same reliability, shorter promises:** at Olist's own on-time rate (91.0%, Feb–Aug 2018), calibrated model promises average **20.9 days vs. 22.9 (−9%)**. A per-route lookup table gets only 0.75 days of that.
-- **Honest out of time:** trained on 2017 and tested on Feb–Aug 2018, P90/P95 promises were kept 91.8% and 95.7% of the time. Orders that never arrived count as misses.
+- **Honest out of time:** trained on 2017 and tested on Feb–Aug 2018, P90/P95 promises were kept 91.8% and 95.6% of the time. Orders that never arrived count as misses.
 - **No leakage, by construction and by test:** seller track record and network congestion are computed point-in-time in dbt and guarded by a unit test and two singular tests.
 - **Disruptions are the limit:** in the Feb–Mar 2018 carrier disruption the model kept 83–85% of promises against Olist's 80–85%. The fix is operational: weekly recalibration and live on-time monitoring.
 
@@ -74,7 +83,7 @@ make setup
 make build        # dbt: build + test the warehouse
 make reconcile    # SQL vs. pandas
 make test         # causal estimators and promise-model helpers on simulated data
-make notebooks    # re-run the Phase 2 and 3 analyses (~4 min)
+make notebooks    # re-run every analysis notebook (~5 min)
 ```
 
 ## Data
