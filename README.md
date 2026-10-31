@@ -31,7 +31,7 @@ A data science project on **96k real e-commerce orders** from Olist, a Brazilian
 ![Promise frontier](docs/figures/03_promise_frontier.png)
 
 - **Same reliability, shorter promises:** at Olist's own on-time rate (91.0%, Feb–Aug 2018), calibrated model promises average **20.9 days vs. 22.9 (−9%)**. A per-route lookup table gets only 0.75 days of that.
-- **Honest out of time:** trained on 2017 and tested on Feb–Aug 2018, P90/P95 promises were kept 91.8% and 95.6% of the time. Orders that never arrived count as misses.
+- **Honest out of time:** trained on 2017 and tested on Feb–Aug 2018, P90/P95 promises were kept 91.8% and 95.7% of the time. Orders that never arrived count as misses.
 - **No leakage, by construction and by test:** seller track record and network congestion are computed point-in-time in dbt and guarded by a unit test and two singular tests.
 - **Disruptions are the limit:** in the Feb–Mar 2018 carrier disruption the model kept 83–85% of promises against Olist's 80–85%. The fix is operational: weekly recalibration and live on-time monitoring.
 

@@ -24,9 +24,9 @@ lint:
 test:           ## unit tests for the analysis code (no warehouse needed)
 	pytest -q
 
-notebooks:      ## re-run the Phase 2 and 3 notebooks against the real warehouse
-	cd analysis && for nb in 02_late_delivery_effect 03_delivery_time_model; do \
-		jupyter nbconvert --to notebook --execute --inplace $$nb.ipynb || exit 1; done
+notebooks:      ## re-run every analysis notebook, in phase order, against the real warehouse
+	cd analysis && for nb in 0*.ipynb; do \
+		jupyter nbconvert --to notebook --execute --inplace $$nb || exit 1; done
 
 docs:           ## lineage graph + column docs at http://localhost:8081
 	cd transform && dbt docs generate --profiles-dir . && dbt docs serve --profiles-dir . --port 8081
