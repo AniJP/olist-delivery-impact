@@ -2,7 +2,19 @@
 
 A data science project on **96k real e-commerce orders** from Olist, a Brazilian marketplace. Olist's delivery estimates are padded by about 12 days, yet 6.8% of orders still arrive late, and late orders collapse review scores (4.3 → 2.3 stars). This project measures what lateness really costs, models each order's delivery time at checkout, and designs an experiment for setting **personalised, shorter promises without more late orders**.
 
-> **Status:** Phases 1–4 (data foundation, causal analysis, delivery-time model, trade-off) complete. Phases 5–6 in progress.
+> **Status:** complete. Start with the **[one-page memo](docs/MEMO.md)** or run the **dashboard** (`streamlit run dashboard/app.py`).
+
+## Results at a glance
+
+| | |
+|---|---|
+| **Cost of a late delivery** | −1.99 stars and +47 pts chance of a 1-star review (doubly robust, five estimators agree) |
+| **Delivery-time model** | P90/P95 promises kept 91.8% / 95.6% of the time on months it never saw |
+| **Recommended policy** | per-order model promise at P92.5: late deliveries **9.0% → 6.5%**, ~140 fewer 1-star reviews per 10k orders |
+| **Experiment to confirm it** | 3 arms randomised by customer; 1-star effect readable in ~2–3 months; A/A- and replay-validated on real orders |
+
+![Dashboard](docs/figures/06_dashboard.png)
+
 
 ## Plan
 
@@ -12,8 +24,8 @@ A data science project on **96k real e-commerce orders** from Olist, a Brazilian
 | **2. Causal analysis** ✅ | How much does lateness *cause* bad reviews and lost customers? | Regression with controls and seller fixed effects, propensity weighting, cross-fitted doubly robust estimation, dose-response, placebo and E-value |
 | **3. Prediction** ✅ | How long will *this* order take, known at checkout? | Point-in-time feature mart, LightGBM quantile regression, out-of-time test, split-conformal calibration |
 | **4. Trade-off** ✅ | How much shorter could promises be at today's late rate? | Policy frontier (uniform shift vs per-order quantile vs cost-aware), out-of-time evaluation, review impact via Phase 2 dose-response |
-| 5. Experiment design | How would we test personalised promises safely? | Metrics, guardrails, power analysis |
-| 6. Business impact | What should Olist do? | Memo + dashboard |
+| **5. Experiment design** ✅ | How would we test personalised promises safely? | Pre-registered plan, power analysis, A/A and replay simulations on real orders, geo-test simulation, sequential guardrails |
+| **6. Business impact** ✅ | What should Olist do? | [Memo](docs/MEMO.md) + Streamlit dashboard running from committed aggregates, smoke-tested in CI |
 
 ## Phase 2 results ([notebook](analysis/02_late_delivery_effect.ipynb) · [write-up](docs/PHASE2_RESULTS.md))
 
@@ -26,6 +38,15 @@ A data science project on **96k real e-commerce orders** from Olist, a Brazilian
 
 ![Dose-response](docs/figures/02_dose_response.png)
 
+## Phase 3 results ([notebook](analysis/03_delivery_time_model.ipynb) · [write-up](docs/PHASE3_RESULTS.md))
+
+![Promise frontier](docs/figures/03_promise_frontier.png)
+
+- **Same reliability, shorter promises:** at Olist's own on-time rate (91.0%, Feb–Aug 2018), calibrated model promises average **20.9 days vs. 22.9 (−9%)**. A per-route lookup table gets only 0.75 days of that.
+- **Honest out of time:** trained on 2017 and tested on Feb–Aug 2018, P90/P95 promises were kept 91.8% and 95.6% of the time. Orders that never arrived count as misses.
+- **No leakage, by construction and by test:** seller track record and network congestion are computed point-in-time in dbt and guarded by a unit test and two singular tests.
+- **Disruptions are the limit:** in the Feb–Mar 2018 carrier disruption the model kept 83–85% of promises against Olist's 80–85%. The fix is operational: weekly recalibration and live on-time monitoring.
+
 ## Phase 4 results ([notebook](analysis/04_promise_tradeoff.ipynb) · [write-up](docs/PHASE4_RESULTS.md))
 
 ![Promise frontier](docs/figures/04_frontier.png)
@@ -35,14 +56,18 @@ A data science project on **96k real e-commerce orders** from Olist, a Brazilian
 - **Why it works:** it moves slack from where it is wasted to where it is missing. São Paulo promises get 1.7 days shorter at the same late rate, while Rio de Janeiro and Bahia get longer promises and roughly half the late rate.
 - **Keep it simple:** a cost-aware per-order optimiser adds nothing over a single quantile.
 
-## Phase 3 results ([notebook](analysis/03_delivery_time_model.ipynb) · [write-up](docs/PHASE3_RESULTS.md))
+## Phase 5: experiment plan ([plan](docs/PHASE5_EXPERIMENT_PLAN.md) · [notebook](analysis/05_experiment_design.ipynb))
 
-![Promise frontier](docs/figures/03_promise_frontier.png)
-
-- **Same reliability, shorter promises:** at Olist's own on-time rate (91.0%, Feb–Aug 2018), calibrated model promises average **20.9 days vs. 22.9 (−9%)**. A per-route lookup table gets only 0.75 days of that.
-- **Honest out of time:** trained on 2017 and tested on Feb–Aug 2018, P90/P95 promises were kept 91.8% and 95.6% of the time. Orders that never arrived count as misses.
-- **No leakage, by construction and by test:** seller track record and network congestion are computed point-in-time in dbt and guarded by a unit test and two singular tests.
-- **Disruptions are the limit:** in the Feb–Mar 2018 carrier disruption the model kept 83–85% of promises against Olist's 80–85%. The fix is operational: weekly recalibration and live on-time monitoring.
+- **Three arms, randomised by customer:** Control (Olist's promise), Reliable (model P92.5), Fast (about 2 days shorter at today's late rate).
+- **Sized from real data:**
+  - the late-rate drop shows up within 2–4 weeks (~1,800 orders per arm)
+  - the 1-star effect needs ~7,100 reviewed orders per arm, about 2–3 months at this volume
+- **Validated before running:**
+  - A/A splits of real customers give a 6–7% false-positive rate, within noise of 5%
+  - a replay of real deliveries against each arm's promise confirms the power calculation
+- **Honest limits:**
+  - a geo test on ~100 regions needs a ~13% lift to detect anything, so the sales question requires visitor-level randomisation (millions of visitors for a 1.6% lift)
+  - retention needs ~32,000 new customers per arm, so it becomes a 12-month holdout
 
 ## Early findings (from [docs/DATA_PROFILE.md](docs/DATA_PROFILE.md))
 - **Padded promises:** the median promise is 24 days for a 10-day median delivery.
@@ -74,6 +99,17 @@ Key modelling decisions:
 - **Reconciliation:** `scripts/reconcile.py` recomputes the headline metrics from the raw CSVs with pandas and checks the SQL warehouse matches exactly.
 - **CI** builds the whole warehouse from a synthetic dataset with the identical schema on every push. The real data isn't committed.
 
+## Repository layout
+
+```
+transform/      dbt project: staging -> intermediate -> marts, data + unit tests, leakage guards
+scripts/        synthetic data for CI, SQL-vs-pandas reconciliation
+analysis/       causal.py, predict.py, policy.py, experiment.py + one notebook per phase
+dashboard/      Streamlit app + the small aggregated CSVs it runs on
+docs/           memo, phase write-ups, experiment plan, figures, result tables
+tests/          unit tests for every analysis module and a dashboard smoke test
+```
+
 ## Run it
 
 ```bash
@@ -83,7 +119,9 @@ make setup
 make build        # dbt: build + test the warehouse
 make reconcile    # SQL vs. pandas
 make test         # causal estimators and promise-model helpers on simulated data
-make notebooks    # re-run every analysis notebook (~5 min)
+make notebooks    # re-run every analysis notebook (~6 min)
+python dashboard/export_data.py   # refresh the dashboard's aggregated data
+streamlit run dashboard/app.py    # open the dashboard
 ```
 
 ## Data

@@ -1,6 +1,6 @@
 # raw data is downloaded from Kaggle, not committed (size + license)
-data/
-!data/README.md
+/data/*
+!/data/README.md
 warehouse/
 *.duckdb
 *.duckdb.wal
