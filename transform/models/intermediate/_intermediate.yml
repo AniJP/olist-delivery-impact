@@ -22,7 +22,50 @@ models:
         data_tests:
           - between: {arguments: {min_value: 1, max_value: 100}}
 
+  - name: int_seller_history
+    description: Seller track record known at each order's checkout (only orders delivered before it).
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: seller_prior_orders
+        data_tests: [not_null, non_negative]
+      - name: seller_prior_late_rate
+        data_tests:
+          - between: {arguments: {min_value: 0, max_value: 1}}
+
+  - name: int_network_congestion
+    description: Daily network snapshot built only from deliveries and purchases before that day.
+    columns:
+      - name: snapshot_date
+        data_tests: [unique, not_null]
+
+  - name: int_state_congestion
+    description: Daily per-destination-state delivery times over the previous 30 days.
+    data_tests:
+      - unique_combination:
+          arguments: {columns: [snapshot_date, customer_state]}
+
 unit_tests:
+  - name: seller_history_ignores_orders_not_yet_delivered
+    description: >
+      Only orders delivered before checkout count. o2 was bought after o1 was delivered (counts);
+      o3 was bought while o2 was still in transit, so o2 must not count for o3.
+    model: int_seller_history
+    given:
+      - input: ref('fct_orders')
+        rows:
+          - {order_id: "o1", seller_id: "s1", purchased_at: "2018-01-01 10:00:00", delivered_at: "2018-01-05 10:00:00", delivery_days_exact: 4.0, days_to_ship: 1.0, is_late: false}
+          - {order_id: "o2", seller_id: "s1", purchased_at: "2018-01-06 10:00:00", delivered_at: "2018-01-20 10:00:00", delivery_days_exact: 14.0, days_to_ship: 2.0, is_late: true}
+          - {order_id: "o3", seller_id: "s1", purchased_at: "2018-01-10 10:00:00", delivered_at: null, delivery_days_exact: null, days_to_ship: null, is_late: null}
+          - {order_id: "o4", seller_id: "s2", purchased_at: "2018-01-30 10:00:00", delivered_at: null, delivery_days_exact: null, days_to_ship: null, is_late: null}
+    expect:
+      rows:
+        - {order_id: "o1", seller_prior_orders: 0, seller_prior_delivery_days: null, seller_prior_late_rate: null}
+        - {order_id: "o2", seller_prior_orders: 1, seller_prior_delivery_days: 4.0, seller_prior_late_rate: 0.0}
+        - {order_id: "o3", seller_prior_orders: 1, seller_prior_delivery_days: 4.0, seller_prior_late_rate: 0.0}
+        - {order_id: "o4", seller_prior_orders: 0, seller_prior_delivery_days: null, seller_prior_late_rate: null}
+
+
   - name: same_day_orders_are_one_session
     description: Orders placed by one person on the same day form one session; a later day starts session 2.
     model: int_purchase_sessions

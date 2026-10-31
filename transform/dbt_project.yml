@@ -15,6 +15,8 @@ vars:
   analysis_end_date: "2018-08-31"
   # Customers need this many days of follow-up before their repeat-purchase outcome is known.
   repeat_window_days: 180
+  # Last delivery timestamp in the extract; orders still "shipped" were in transit at this moment.
+  data_snapshot_at: "2018-10-17 13:22:46"
 
 models:
   olist:

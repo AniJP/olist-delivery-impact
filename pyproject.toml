@@ -19,7 +19,7 @@ build-backend = "setuptools.build_meta"
 packages = []
 
 [project.optional-dependencies]
-analysis = ["numpy", "scipy", "statsmodels", "scikit-learn", "lightgbm", "matplotlib", "seaborn", "jupyterlab"]
+analysis = ["numpy", "scipy", "statsmodels", "scikit-learn", "lightgbm", "pyarrow", "matplotlib", "seaborn", "jupyterlab"]
 dev = ["pytest>=8", "ruff>=0.6"]
 
 [tool.ruff]

@@ -30,3 +30,16 @@ models:
       - name: days_to_second_purchase
         data_tests:
           - between: {arguments: {min_value: 1, max_value: 1000}}
+
+  - name: fct_order_features
+    description: Checkout-time, point-in-time features plus the delivery-time label, one row per non-cancelled order.
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: seller_prior_orders
+        data_tests: [not_null, non_negative]
+      - name: net_late_rate_last_14d
+        data_tests:
+          - between: {arguments: {min_value: 0, max_value: 1}}
+      - name: censored_at_days
+        data_tests: [non_negative]

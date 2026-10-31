@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: Lint, dbt build and reconciliation on synthetic data
+    name: Lint, tests, dbt build and reconciliation on synthetic data
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -17,10 +17,13 @@ jobs:
           cache: pip
 
       - name: Install
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[analysis,dev]"
 
-      - name: Lint
-        run: ruff check scripts
+      - name: Lint (scripts, analysis modules, notebooks, tests)
+        run: ruff check scripts analysis tests
+
+      - name: Unit tests (causal estimators, promise-model helpers)
+        run: pytest -q
 
       # The real Olist data isn't committed (size + license). CI builds the warehouse from a synthetic
       # dataset with the identical schema, runs every dbt test, then reconciles the SQL results with an
