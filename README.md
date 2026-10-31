@@ -2,23 +2,34 @@
 
 A data science project on **96k real e-commerce orders** from Olist, a Brazilian marketplace. Olist's delivery estimates are padded by about 12 days, yet 6.8% of orders still arrive late, and late orders collapse review scores (4.3 → 2.3 stars). This project measures what lateness really costs, models each order's delivery time at checkout, and designs an experiment for setting **personalised, shorter promises without more late orders**.
 
-> **Status:** Phase 1 (data foundation) complete. Phases 2–6 in progress.
+> **Status:** Phases 1 (data foundation) and 2 (causal analysis) complete. Phases 3–6 in progress.
 
 ## Plan
 
 | Phase | Question | Methods |
 |---|---|---|
 | **1. Data foundation** ✅ | Can we trust the data? | dbt + DuckDB, 56 data tests, unit tests, SQL-vs-pandas reconciliation |
-| 2. Causal analysis | How much does lateness *cause* bad reviews and lost customers? | Regression with controls, propensity matching, dose-response, sensitivity analysis |
+| **2. Causal analysis** ✅ | How much does lateness *cause* bad reviews and lost customers? | Regression with controls and seller fixed effects, propensity weighting, cross-fitted doubly robust estimation, dose-response, placebo and E-value |
 | 3. Prediction | How long will *this* order take, known at checkout? | Quantile gradient boosting, time-based validation, calibration |
 | 4. Trade-off | How much shorter could promises be at today's late rate? | Promise-length vs. late-rate frontier |
 | 5. Experiment design | How would we test personalised promises safely? | Metrics, guardrails, power analysis |
 | 6. Business impact | What should Olist do? | Memo + dashboard |
 
+## Phase 2 results ([notebook](analysis/02_late_delivery_effect.ipynb) · [write-up](docs/PHASE2_RESULTS.md))
+
+![Late delivery costs about 2 stars under every estimator](docs/figures/02_review_effect_estimators.png)
+
+- **A missed promise costs 1.99 stars** (doubly robust ATT, 95% CI −2.03 to −1.95) and adds **47 pp** to the chance of a 1-star review. Five estimators agree within 0.08 stars, including a within-seller comparison.
+- **The penalty is asymmetric:** each extra week early is worth about +0.16 stars, while 4+ days late costs 2.0–2.4.
+- **Retention:** a late first order lowers the 180-day repeat rate by about 15% (0.3 pp on a 2% base), but the interval includes zero. The data can only detect drops of about 32% or more, so this is a question for an experiment (Phase 5).
+- **Robustness:** the effect survives dropping congested months, month × state fixed effects and simple single-item orders. A placebo with shuffled lateness gives zero.
+
+![Dose-response](docs/figures/02_dose_response.png)
+
 ## Early findings (from [docs/DATA_PROFILE.md](docs/DATA_PROFILE.md))
 - **Padded promises:** the median promise is 24 days for a 10-day median delivery.
 - **Lateness wrecks reviews:** the 1-star share rises from ~6% to ~68% once an order is 8+ days late.
-- **Early barely helps:** 15+ days early scores only 0.1 stars more than 1–7 days early.
+- **Early barely helps (raw):** 15+ days early scores only 0.1 stars more than 1–7 days early. After adjustment it is +0.33 (Phase 2), still small next to the late penalty.
 - **Measurement trap:** 73% of late orders were reviewed before they arrived.
 - **Split checkouts inflate retention by ~60%:** grouping same-day orders into one purchase drops the 180-day repeat rate from 3.2% to 2.0%.
 
@@ -51,6 +62,8 @@ make setup
 # download the data into data/raw (see data/README.md), then:
 make build        # dbt: build + test the warehouse
 make reconcile    # SQL vs. pandas
+pytest            # estimators recover a known effect from simulated, confounded data
+jupyter nbconvert --to notebook --execute --inplace analysis/02_late_delivery_effect.ipynb   # Phase 2 (~3 min)
 ```
 
 ## Data
